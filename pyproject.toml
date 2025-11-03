@@ -1,0 +1,56 @@
+[project]
+name = "monaco-assets"
+version = "0.1.4"
+description = "Automatically download Monaco editor assets."
+requires-python = ">=3.10"
+dependencies = ["certifi", "platformdirs"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+readme = "README.md"
+license = "MIT"
+
+keywords = ["monaco", "assets"]
+
+[build-system]
+requires = ["flit_core >=3.6,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+extend-select = [
+    'D',        # pydocstyle (docstring formatting)
+    'A',        # flake8 builtins (Python builtins being used as variables or parameters.)
+    'I',        # isort (sort imports)
+    'PLW0602',  # unassigned global variable
+    'W505',     # doc line too long
+    'E501',     # line too long
+    'UP',       # use most modern code allowed by lowest python version
+]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 100
+max-doc-length = 72
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.pyrefly]
+include = ["monaco_assests"]
+
+[dependency-groups]
+dev = [
+    "build>=1.3.0",
+    "pyrefly>=0.39.4",
+    "ruff>=0.13.0",
+    "twine>=6.2.0",
+]

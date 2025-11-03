@@ -1,0 +1,15 @@
+# virtual environments
+.venv
+
+# byte compiled files
+__pycache__/
+*.pyc
+
+# build files and tarball directory
+build/
+dist/
+*.egg-info/
+.DS_Store
+
+# ruff
+.ruff_cache
