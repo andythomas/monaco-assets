@@ -13,3 +13,6 @@ dist/
 
 # ruff
 .ruff_cache
+
+# zed editor
+.zed

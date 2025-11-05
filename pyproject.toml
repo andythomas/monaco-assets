@@ -1,6 +1,6 @@
 [project]
 name = "monaco-assets"
-version = "0.1.4"
+version = "0.1.5"
 description = "Automatically download Monaco editor assets."
 requires-python = ">=3.10"
 dependencies = ["certifi", "platformdirs"]
@@ -45,7 +45,7 @@ max-doc-length = 72
 convention = "numpy"
 
 [tool.pyrefly]
-include = ["monaco_assests"]
+project-includes = ["monaco_assets"]
 
 [dependency-groups]
 dev = [

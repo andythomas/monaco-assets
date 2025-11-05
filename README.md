@@ -73,7 +73,7 @@ Version correspondence will be ensured after initial bugfixes.
 
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
-| 0.1.4           | 0.54.0                |
+| 0.1.5           | 0.54.0                |
 
 ## Requirements
 
