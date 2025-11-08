@@ -1,8 +1,8 @@
 # Monaco Editor Assets
 
 A Python package that provides easy access to Monaco Editor assets. Assets are
-automatically downloaded and cached on first use, eliminating the need to bundle large
-files with the package.
+automatically downloaded on first use, eliminating the need to bundle large
+files with the package. The assets can be served by a webserver on a custom port.
 
 ## Installation
 
@@ -17,13 +17,8 @@ uv pip install monaco-assets
 ```python
 import monaco_assets
 
-assets_path = monaco_assets.get_path()
-print(f"Monaco Editor assets: {assets_path}")
-
-# Access Monaco Editor files
-loader_js = assets_path / "min/vs/loader.js"
-editor_js = assets_path / "min/vs/editor/editor.main.js"
-editor_css = assets_path / "min/vs/editor/editor.main.css"
+import monaco_assets
+server = monaco_assets.MonacoServer(port=8000)
 ```
 
 ## Cache Management
@@ -73,7 +68,7 @@ Version correspondence will be ensured after initial bugfixes.
 
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
-| 0.1.5           | 0.54.0                |
+| 0.2.0           | 0.54.0                |
 
 ## Requirements
 

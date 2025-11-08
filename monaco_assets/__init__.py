@@ -2,15 +2,20 @@
 Provide Monaco editor assets.
 
 Download Monaco editor assets at first use. The assets are downloaded,
-extracted, and made available in a platform specific cache folder.
+extracted, and made available in a platform specific cache folder. To
+access the assets,a simple webserver can be used.
 """
 
 import hashlib
+import http.server
 import inspect
 import shutil
+import socketserver
 import ssl
 import tarfile
+import threading
 import urllib.request
+from functools import partial
 from pathlib import Path
 
 import certifi
@@ -19,7 +24,67 @@ from platformdirs import user_cache_dir
 VERSION = "0.54.0"
 EXPECTED_SHA1 = "c0d6ebb46b83f1bef6f67f6aa471e38ba7ef8231"
 
-CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets"))
+CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets")) / f"monaco-editor-{VERSION}"
+
+
+class MonacoServer:
+    """HTTP server to serve Monaco editor assets."""
+
+    def __init__(self, port: int = 8000):
+        """
+        Initialize and start Monaco Editor assets server.
+
+        Download assets if needed and start a local HTTP server in a
+        background thread. The assets will be available at:
+        http://localhost:<port>
+
+        Parameters
+        ----------
+        port : int
+            Port number for the HTTP server (default: 8000)
+        """
+        self._port: int = port
+        self._httpd: socketserver.TCPServer | None
+        self._thread: threading.Thread | None = threading.Thread(
+            target=self._run_server, daemon=True
+        )
+        self._thread.start()
+
+    def _run_server(self):
+        """Run the HTTP server in a background thread."""
+        handler = partial(http.server.SimpleHTTPRequestHandler, directory=get_path())
+        self._httpd = socketserver.TCPServer(("", self._port), handler)
+        self._httpd.serve_forever()
+
+    def stop(self) -> bool:
+        """
+        Stop the Monaco editor assets server.
+
+        Returns
+        -------
+        bool
+            True if server was stopped, False if no server was running.
+        """
+        if self._httpd is None:
+            return False
+        self._httpd.shutdown()
+        self._httpd.server_close()
+        if self._thread is not None:
+            self._thread.join(timeout=5.0)
+        self._thread = None
+        self._httpd = None
+        return True
+
+    def is_running(self) -> bool:
+        """
+        Check if the Monaco Editor assets server is currently running.
+
+        Returns
+        -------
+        bool
+            True if server is running, False otherwise
+        """
+        return self._thread is not None and self._thread.is_alive() and self._httpd is not None
 
 
 def _download_file(url: str, filename: Path) -> None:
@@ -93,17 +158,16 @@ def get_path() -> Path:
     Path
         The path to the assests.
     """
-    assets_dir = CACHE_DIR / f"monaco-editor-{VERSION}"
-    package_dir = assets_dir / "package"
+    package_dir = CACHE_DIR / "package"
 
     if package_dir.exists() and any(package_dir.iterdir()):
         return package_dir
     try:
-        assets_dir.mkdir(parents=True, exist_ok=True)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
         package = "monaco-editor"
         tgz = f"{package}-{VERSION}.tgz"
         url = f"https://registry.npmjs.org/{package}/-/{tgz}"
-        tgz_file = assets_dir / tgz
+        tgz_file = CACHE_DIR / tgz
         _download_file(url, tgz_file)
         if not _verify_file_hash(tgz_file, EXPECTED_SHA1):
             raise ValueError(f"Hash verification failed for {tgz_file}")
@@ -111,8 +175,8 @@ def get_path() -> Path:
         tgz_file.unlink()
         return package_dir
     except Exception as e:
-        if assets_dir.exists():
-            shutil.rmtree(assets_dir, ignore_errors=True)
+        if CACHE_DIR.exists():
+            shutil.rmtree(CACHE_DIR, ignore_errors=True)
         raise RuntimeError(f"Failed to download Monaco Editor assets: {e}") from e
 
 
