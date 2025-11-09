@@ -73,6 +73,7 @@ class MonacoServer:
         """Run the HTTP server in a background thread."""
         handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
         self._httpd = socketserver.TCPServer(("", self._port), handler)
+        self._httpd.allow_reuse_address = True
         self._httpd.serve_forever()
 
     def stop(self) -> bool:
