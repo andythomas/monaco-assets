@@ -21,6 +21,8 @@ import monaco_assets
 server = monaco_assets.MonacoServer(port=8000)
 ```
 
+Now, you can use `http://localhost:8000/` in a webbrowser to see all assets.
+
 ## Cache Management
 
 ```python
@@ -68,7 +70,7 @@ Version correspondence will be ensured after initial bugfixes.
 
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
-| 0.2.0           | 0.54.0                |
+| 0.3.0           | 0.54.0                |
 
 ## Requirements
 

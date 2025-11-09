@@ -9,6 +9,7 @@ access the assets,a simple webserver can be used.
 import hashlib
 import http.server
 import inspect
+import logging
 import shutil
 import socketserver
 import ssl
@@ -27,6 +28,22 @@ EXPECTED_SHA1 = "c0d6ebb46b83f1bef6f67f6aa471e38ba7ef8231"
 CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets")) / f"monaco-editor-{VERSION}"
 
 
+class _MonacoRequestHandler(http.server.SimpleHTTPRequestHandler):
+    """Custom HTTP request handler can use logging."""
+
+    def __init__(self, *args, logger=None, **kwargs):
+        """Init with optional logger."""
+        self.logger = logger
+        super().__init__(*args, **kwargs)
+
+    def log_message(self, format, *args):  # noqa: A002
+        """Override log_message to use logger.debug."""
+        if self.logger:
+            self.logger.debug(format % args)
+        else:
+            super().log_message(format, *args)
+
+
 class MonacoServer:
     """HTTP server to serve Monaco editor assets."""
 
@@ -43,16 +60,18 @@ class MonacoServer:
         port : int
             Port number for the HTTP server (default: 8000)
         """
+        self.logger = logging.getLogger(f"{__name__}.MonacoServer")
         self._port: int = port
         self._httpd: socketserver.TCPServer | None
         self._thread: threading.Thread | None = threading.Thread(
             target=self._run_server, daemon=True
         )
+        self.logger.info("starting Monaco webserver.")
         self._thread.start()
 
     def _run_server(self):
         """Run the HTTP server in a background thread."""
-        handler = partial(http.server.SimpleHTTPRequestHandler, directory=get_path())
+        handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
         self._httpd = socketserver.TCPServer(("", self._port), handler)
         self._httpd.serve_forever()
 
@@ -65,7 +84,9 @@ class MonacoServer:
         bool
             True if server was stopped, False if no server was running.
         """
+        self.logger.info("stopping Monaco webserver.")
         if self._httpd is None:
+            self.logger.warning("no Monaco webserver was running!")
             return False
         self._httpd.shutdown()
         self._httpd.server_close()
@@ -73,6 +94,7 @@ class MonacoServer:
             self._thread.join(timeout=5.0)
         self._thread = None
         self._httpd = None
+        self.logger.info("Monaco webserver stopped.")
         return True
 
     def is_running(self) -> bool:
