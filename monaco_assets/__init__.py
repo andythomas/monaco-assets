@@ -75,7 +75,7 @@ class MonacoServer:
         try:
             handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
             self._httpd = socketserver.TCPServer(
-                ("", self._port), handler, bind_and_activate=False
+                ("127.0.0.1", self._port), handler, bind_and_activate=False
             )
             self._httpd.allow_reuse_address = True
             self._httpd.server_bind()
