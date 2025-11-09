@@ -16,8 +16,6 @@ uv pip install monaco-assets
 
 ```python
 import monaco_assets
-
-import monaco_assets
 server = monaco_assets.MonacoServer(port=8000)
 ```
 
@@ -70,7 +68,7 @@ Version correspondence will be ensured after initial bugfixes.
 
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
-| 0.3.0           | 0.54.0                |
+| 0.3.1           | 0.54.0                |
 
 ## Requirements
 
