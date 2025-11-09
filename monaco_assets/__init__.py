@@ -63,6 +63,7 @@ class MonacoServer:
         self.logger = logging.getLogger(f"{__name__}.MonacoServer")
         self._port: int = port
         self._httpd: socketserver.TCPServer | None = None
+        self._server_error: Exception | None = None
         self._thread: threading.Thread | None = threading.Thread(
             target=self._run_server, daemon=True
         )
@@ -71,10 +72,19 @@ class MonacoServer:
 
     def _run_server(self):
         """Run the HTTP server in a background thread."""
-        handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
-        self._httpd = socketserver.TCPServer(("", self._port), handler)
-        self._httpd.allow_reuse_address = True
-        self._httpd.serve_forever()
+        try:
+            handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
+            self._httpd = socketserver.TCPServer(
+                ("", self._port), handler, bind_and_activate=False
+            )
+            self._httpd.allow_reuse_address = True
+            self._httpd.server_bind()
+            self._httpd.server_activate()
+            self._httpd.serve_forever()
+        except Exception as e:
+            self._server_error = e
+            self.logger.error(f"Monaco webserver failed to start on port {self._port}: {e}")
+            self._httpd = None
 
     def stop(self) -> bool:
         """
@@ -107,7 +117,23 @@ class MonacoServer:
         bool
             True if server is running, False otherwise
         """
-        return self._thread is not None and self._thread.is_alive() and self._httpd is not None
+        return (
+            self._thread is not None
+            and self._thread.is_alive()
+            and self._httpd is not None
+            and self._server_error is None
+        )
+
+    def get_server_error(self) -> Exception | None:
+        """
+        Get the last server error (if one occured).
+
+        Returns
+        -------
+        Exception | None
+            The last exception during server startup or None.
+        """
+        return self._server_error
 
 
 def _download_file(url: str, filename: Path) -> None:
