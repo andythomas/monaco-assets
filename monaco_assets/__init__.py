@@ -62,7 +62,7 @@ class MonacoServer:
         """
         self.logger = logging.getLogger(f"{__name__}.MonacoServer")
         self._port: int = port
-        self._httpd: socketserver.TCPServer | None
+        self._httpd: socketserver.TCPServer | None = None
         self._thread: threading.Thread | None = threading.Thread(
             target=self._run_server, daemon=True
         )
