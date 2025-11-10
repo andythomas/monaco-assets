@@ -29,7 +29,7 @@ CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets")) / f"monaco-ed
 
 
 class _MonacoRequestHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom HTTP request handler can use logging."""
+    """Custom HTTP request handler that uses logging."""
 
     def __init__(self, *args, logger=None, **kwargs):
         """Init with optional logger."""
@@ -99,7 +99,14 @@ class MonacoServer:
         if self._httpd is None:
             self.logger.warning("no Monaco webserver was running!")
             return False
-        self._httpd.shutdown()
+        self.logger.debug("shutting down Monaco webserver.")
+        shutdown_thread = threading.Thread(target=self._httpd.shutdown)
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+        shutdown_thread.join(timeout=2.0)
+        if shutdown_thread.is_alive():
+            self.logger.warning("Monaco webserver shutdown timed out (common on windows)!")
+        self.logger.debug("closing Monaco webserver.")
         self._httpd.server_close()
         if self._thread is not None:
             self._thread.join(timeout=5.0)
