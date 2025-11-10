@@ -27,6 +27,10 @@ EXPECTED_SHA1 = "c0d6ebb46b83f1bef6f67f6aa471e38ba7ef8231"
 
 CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets")) / f"monaco-editor-{VERSION}"
 
+logger = logging.getLogger(f"{__name__}")
+logger.debug("using monaco-editor-%s", VERSION)
+logger.debug("using Monaco from directory %s", CACHE_DIR)
+
 
 class _MonacoRequestHandler(http.server.SimpleHTTPRequestHandler):
     """Custom HTTP request handler that uses logging."""
@@ -39,7 +43,7 @@ class _MonacoRequestHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, format, *args):  # noqa: A002
         """Override log_message to use logger.debug."""
         if self.logger:
-            self.logger.debug(format % args)
+            self.logger.debug(format, *args)
         else:
             super().log_message(format, *args)
 
@@ -83,7 +87,7 @@ class MonacoServer:
             self._httpd.serve_forever()
         except Exception as e:
             self._server_error = e
-            self.logger.error(f"Monaco webserver failed to start on port {self._port}: {e}")
+            self.logger.error("Monaco webserver failed to start on port %s: %s", self._port, e)
             self._httpd = None
 
     def stop(self) -> bool:
@@ -155,6 +159,7 @@ def _download_file(url: str, filename: Path) -> None:
         The filename of the received file.
 
     """
+    logger.debug("downloading %s from %s", filename, url)
     context = ssl.create_default_context(cafile=certifi.where())
     with urllib.request.urlopen(url, context=context) as response:
         with open(filename, "wb") as out_file:
@@ -177,6 +182,7 @@ def _verify_file_hash(filename: Path, expected_sha1: str) -> bool:
     bool
         True if hash matches, False otherwise.
     """
+    logger.debug("compare hash to be %s for %s", expected_sha1, filename)
     sha1_hash = hashlib.sha1()
     with open(filename, "rb") as f:
         for chunk in iter(lambda: f.read(4096), b""):
@@ -194,6 +200,7 @@ def _extract_tgz(tgz: Path) -> None:
     tgz: Path
         The tar.gz file.
     """
+    logger.debug("extracting %s", tgz)
     dest = tgz.parent
     with tarfile.open(tgz, "r:gz") as tar:
         # delete the if clause for Python>=3.12
@@ -219,6 +226,7 @@ def get_path() -> Path:
     if package_dir.exists() and any(package_dir.iterdir()):
         return package_dir
     try:
+        logger.info("no existing Monaco assets found, caching assets.")
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         package = "monaco-editor"
         tgz = f"{package}-{VERSION}.tgz"
@@ -239,4 +247,5 @@ def get_path() -> Path:
 def clear_cache() -> None:
     """Clear Monaco Editor asset cache."""
     if CACHE_DIR.exists():
+        logger.debug("deleting Monaco assets in %s.", CACHE_DIR)
         shutil.rmtree(CACHE_DIR)

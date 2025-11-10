@@ -1,6 +1,6 @@
 [project]
 name = "monaco-assets"
-version = "0.4.2"
+version = "0.4.3"
 description = "Automatically download Monaco editor assets."
 requires-python = ">=3.10"
 dependencies = ["certifi", "platformdirs"]
@@ -38,6 +38,8 @@ extend-select = [
     'W505',     # doc line too long
     'E501',     # line too long
     'UP',       # use most modern code allowed by lowest python version
+    'LOG',      # logging
+    'G',        # logging format
 ]
 
 [tool.ruff.lint.pycodestyle]
