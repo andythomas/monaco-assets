@@ -3,23 +3,23 @@ Provide Monaco editor assets.
 
 Download Monaco editor assets at first use. The assets are downloaded,
 extracted, and made available in a platform specific cache folder. To
-access the assets,a simple webserver can be used.
+access the assets, a webserver based on fastapi and uvicorn is provided.
 """
 
 import hashlib
-import http.server
 import inspect
 import logging
 import shutil
-import socketserver
 import ssl
 import tarfile
 import threading
 import urllib.request
-from functools import partial
 from pathlib import Path
 
 import certifi
+import uvicorn
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from platformdirs import user_cache_dir
 
 VERSION = "0.54.0"
@@ -32,22 +32,6 @@ logger.debug("using monaco-editor-%s", VERSION)
 logger.debug("using Monaco from directory %s", CACHE_DIR)
 
 
-class _MonacoRequestHandler(http.server.SimpleHTTPRequestHandler):
-    """Custom HTTP request handler that uses logging."""
-
-    def __init__(self, *args, logger=None, **kwargs):
-        """Init with optional logger."""
-        self.logger = logger
-        super().__init__(*args, **kwargs)
-
-    def log_message(self, format, *args):  # noqa: A002
-        """Override log_message to use logger.debug."""
-        if self.logger:
-            self.logger.debug(format, *args)
-        else:
-            super().log_message(format, *args)
-
-
 class MonacoServer:
     """HTTP server to serve Monaco editor assets."""
 
@@ -55,9 +39,8 @@ class MonacoServer:
         """
         Initialize and start Monaco Editor assets server.
 
-        Download assets if needed and start a local HTTP server in a
-        background thread. The assets will be available at:
-        http://localhost:<port>
+        Start a local HTTP server in a background thread. The assets
+        will be available at: http://localhost:<port>/pathtofile
 
         Parameters
         ----------
@@ -66,8 +49,7 @@ class MonacoServer:
         """
         self.logger = logging.getLogger(f"{__name__}.MonacoServer")
         self._port: int = port
-        self._httpd: socketserver.TCPServer | None = None
-        self._server_error: Exception | None = None
+        self._server: uvicorn.Server | None = None
         self._thread: threading.Thread | None = threading.Thread(
             target=self._run_server, daemon=True
         )
@@ -75,76 +57,45 @@ class MonacoServer:
         self._thread.start()
 
     def _run_server(self):
-        """Run the HTTP server in a background thread."""
+        """Run the server and download assets if not cached."""
         try:
-            handler = partial(_MonacoRequestHandler, directory=get_path(), logger=self.logger)
-            self._httpd = socketserver.TCPServer(
-                ("127.0.0.1", self._port), handler, bind_and_activate=False
+            app = FastAPI()
+            assets_path = get_path()
+            app.mount("/", StaticFiles(directory=str(assets_path)), name="static")
+
+            config = uvicorn.Config(
+                app=app,
+                host="127.0.0.1",
+                port=self._port,
+                log_level="error",  # Reduce uvicorn's verbose logging
             )
-            self._httpd.allow_reuse_address = True
-            self._httpd.server_bind()
-            self._httpd.server_activate()
-            self._httpd.serve_forever()
+            print("Starting server on port:", self._port)
+            self._server = uvicorn.Server(config)
+            self._server.run()
         except Exception as e:
-            self._server_error = e
             self.logger.error("Monaco webserver failed to start on port %s: %s", self._port, e)
-            self._httpd = None
+            self._server = None
 
-    def stop(self) -> bool:
-        """
-        Stop the Monaco editor assets server.
-
-        Returns
-        -------
-        bool
-            True if server was stopped, False if no server was running.
-        """
+    def stop(self) -> None:
+        """Stop the Monaco editor assets server."""
         self.logger.info("stopping Monaco webserver.")
-        if self._httpd is None:
-            self.logger.warning("no Monaco webserver was running!")
-            return False
-        self.logger.debug("shutting down Monaco webserver.")
-        shutdown_thread = threading.Thread(target=self._httpd.shutdown)
-        shutdown_thread.daemon = True
-        shutdown_thread.start()
-        shutdown_thread.join(timeout=2.0)
-        if shutdown_thread.is_alive():
-            self.logger.warning("Monaco webserver shutdown timed out (common on windows)!")
-        self.logger.debug("closing Monaco webserver.")
-        self._httpd.server_close()
+        if self._server is not None:
+            self.logger.debug("shutting down Monaco webserver.")
+            self._server.should_exit = True
         if self._thread is not None:
             self._thread.join(timeout=5.0)
         self._thread = None
-        self._httpd = None
+        self._server = None
         self.logger.info("Monaco webserver stopped.")
-        return True
 
     def is_running(self) -> bool:
-        """
-        Check if the Monaco Editor assets server is currently running.
-
-        Returns
-        -------
-        bool
-            True if server is running, False otherwise
-        """
+        """Check if the server is currently running."""
         return (
-            self._thread is not None
+            self._server is not None
+            and self._thread is not None
             and self._thread.is_alive()
-            and self._httpd is not None
-            and self._server_error is None
+            and not getattr(self._server, "should_exit", True)
         )
-
-    def get_server_error(self) -> Exception | None:
-        """
-        Get the last server error (if one occured).
-
-        Returns
-        -------
-        Exception | None
-            The last exception during server startup or None.
-        """
-        return self._server_error
 
 
 def _download_file(url: str, filename: Path) -> None:
