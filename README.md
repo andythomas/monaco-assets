@@ -20,6 +20,7 @@ server = monaco_assets.MonacoServer(port=8000)
 ```
 
 Now, you can use `http://localhost:8000/min/vs/loader.js` in a webbrowser to see, e.g., loader.js.
+Please note that there are no directory listings, one has to directly address the file(s).
 
 ## Cache Management
 
@@ -68,7 +69,7 @@ Version correspondence will be ensured after initial bugfixes.
 
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
-| 0.5.0           | 0.54.0                |
+| 0.5.1           | 0.54.0                |
 
 ## Requirements
 

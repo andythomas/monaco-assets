@@ -32,6 +32,19 @@ logger.debug("using monaco-editor-%s", VERSION)
 logger.debug("using Monaco from directory %s", CACHE_DIR)
 
 
+class UvicornToMonacoHandler(logging.Handler):
+    """Capture uvicorn logs and pipe them to MonacoServer logger."""
+
+    def __init__(self, monaco_logger: logging.Logger):
+        super().__init__()
+        self.monaco_logger = monaco_logger
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Log all uvicorn messages as debug level."""
+        msg = f"[uvicorn] {record.getMessage()}"
+        self.monaco_logger.debug(msg)
+
+
 class MonacoServer:
     """HTTP server to serve Monaco editor assets."""
 
@@ -40,7 +53,9 @@ class MonacoServer:
         Initialize and start Monaco Editor assets server.
 
         Start a local HTTP server in a background thread. The assets
-        will be available at: http://localhost:<port>/pathtofile
+        will be available at: http://localhost:<port>/pathtofile. The
+        internal server logs are only visible if the logging level is
+        set to DEBUG level to avoid log chatter.
 
         Parameters
         ----------
@@ -63,13 +78,46 @@ class MonacoServer:
             assets_path = get_path()
             app.mount("/", StaticFiles(directory=str(assets_path)), name="static")
 
+            log_config = {
+                "version": 1,
+                "disable_existing_loggers": False,
+                "formatters": {
+                    "default": {
+                        "format": "%(levelprefix)s %(message)s",
+                    },
+                },
+                "handlers": {
+                    "monaco_handler": {
+                        "()": UvicornToMonacoHandler,
+                        "monaco_logger": self.logger,
+                    },
+                },
+                "loggers": {
+                    "uvicorn": {
+                        "handlers": ["monaco_handler"],
+                        "level": "DEBUG",
+                        "propagate": False,
+                    },
+                    "uvicorn.error": {
+                        "handlers": ["monaco_handler"],
+                        "level": "DEBUG",
+                        "propagate": False,
+                    },
+                    "uvicorn.access": {
+                        "handlers": ["monaco_handler"],
+                        "level": "DEBUG",
+                        "propagate": False,
+                    },
+                },
+            }
+
             config = uvicorn.Config(
                 app=app,
                 host="127.0.0.1",
                 port=self._port,
-                log_level="error",  # Reduce uvicorn's verbose logging
+                log_config=log_config,
+                access_log=True,
             )
-            print("Starting server on port:", self._port)
             self._server = uvicorn.Server(config)
             self._server.run()
         except Exception as e:
@@ -80,7 +128,6 @@ class MonacoServer:
         """Stop the Monaco editor assets server."""
         self.logger.info("stopping Monaco webserver.")
         if self._server is not None:
-            self.logger.debug("shutting down Monaco webserver.")
             self._server.should_exit = True
         if self._thread is not None:
             self._thread.join(timeout=5.0)
