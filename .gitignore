@@ -14,5 +14,10 @@ dist/
 # ruff
 .ruff_cache
 
+# pytest / coverage
+.pytest_cache
+.coverage
+htmlcov/
+
 # zed editor
 .zed
