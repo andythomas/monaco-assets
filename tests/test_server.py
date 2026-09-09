@@ -9,6 +9,10 @@ import pytest
 
 import monaco_assets
 
+# The server requires the optional fastapi/uvicorn dependencies.
+pytest.importorskip("fastapi", reason="requires the optional 'server' extra")
+pytest.importorskip("uvicorn", reason="requires the optional 'server' extra")
+
 
 def _wait_until(predicate, timeout: float = 5.0, interval: float = 0.05) -> bool:
     """Poll predicate() until it returns truthy or timeout elapses."""
