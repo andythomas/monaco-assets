@@ -109,3 +109,19 @@ def test_get_path_treats_empty_package_dir_as_cache_miss(
     result = monaco_assets.get_path()
 
     assert (result / "loader.js").exists()
+
+
+def test_has_cached_assets_reflects_cache_state(isolated_cache_dir: Path) -> None:
+    """has_cached_assets matches the cache logic used by get_path."""
+    package_dir = isolated_cache_dir / "package"
+
+    # cold cache
+    assert monaco_assets.has_cached_assets() is False
+
+    # existing but empty package dir is still a cache miss
+    package_dir.mkdir(parents=True)
+    assert monaco_assets.has_cached_assets() is False
+
+    # a non-empty package dir is a cache hit
+    (package_dir / "loader.js").write_text("cached")
+    assert monaco_assets.has_cached_assets() is True

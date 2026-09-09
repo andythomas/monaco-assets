@@ -263,6 +263,20 @@ def _extract_tgz(tgz: Path) -> None:
                 tar.extract(member, dest)
 
 
+def has_cached_assets() -> bool:
+    """
+    Check whether the Monaco Editor assets are already cached.
+
+    Returns
+    -------
+    bool
+        True if the cached assets exist and :func:`get_path` will return
+        them without downloading; False if a download is required.
+    """
+    package_dir = CACHE_DIR / "package"
+    return package_dir.exists() and any(package_dir.iterdir())
+
+
 def get_path(
     progress_callback: Callable[[int, int | None], None] | None = None,
 ) -> Path:
@@ -282,10 +296,8 @@ def get_path(
     Path
         The path to the assests.
     """
-    package_dir = CACHE_DIR / "package"
-
-    if package_dir.exists() and any(package_dir.iterdir()):
-        return package_dir
+    if has_cached_assets():
+        return CACHE_DIR / "package"
     try:
         logger.info("no existing Monaco assets found, caching assets.")
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -298,7 +310,7 @@ def get_path(
             raise ValueError(f"Hash verification failed for {tgz_file}")
         _extract_tgz(tgz_file)
         tgz_file.unlink()
-        return package_dir
+        return CACHE_DIR / "package"
     except Exception as e:
         if CACHE_DIR.exists():
             shutil.rmtree(CACHE_DIR, ignore_errors=True)

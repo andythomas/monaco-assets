@@ -38,6 +38,13 @@ import monaco_assets
 
 # Clear cache to free space before uninstalling the package
 monaco_assets.clear_cache()
+
+# Check whether the assets are already cached (no download needed)
+if monaco_assets.has_cached_assets():
+    ...
+else:
+    # a download will take place; e.g. show a progress indicator
+    assets_path = monaco_assets.get_path(progress_callback=show_progress)
 ```
 
 ## Download Progress
@@ -63,7 +70,9 @@ assets_path = monaco_assets.get_path(progress_callback=show_progress)
 Notes:
 
 - The callback is only invoked if a download actually takes place; on a warm
-  cache `get_path()` returns immediately without calling it.
+  cache `get_path()` returns immediately without calling it. If you build
+  progress UI around the call, check `has_cached_assets()` first to avoid
+  showing it unnecessarily.
 - `total_bytes` is `None` if the server does not send a `Content-Length`
   header. The first chunk is always reported; further calls are throttled to
   at most one per 0.5 seconds, plus a final call when the download completes.
