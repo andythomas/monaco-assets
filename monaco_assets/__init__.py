@@ -14,7 +14,9 @@ import shutil
 import ssl
 import tarfile
 import threading
+import time
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -169,7 +171,11 @@ class MonacoServer:
         )
 
 
-def _download_file(url: str, filename: Path) -> None:
+def _download_file(
+    url: str,
+    filename: Path,
+    progress_callback: Callable[[int, int | None], None] | None = None,
+) -> None:
     """
     Download a file from a URL to the destination path.
 
@@ -179,13 +185,36 @@ def _download_file(url: str, filename: Path) -> None:
         The URL.
     filename : Path
         The filename of the received file.
+    progress_callback : callable or None, optional
+        Called during the download with
+        ``(bytes_downloaded, total_bytes)``. ``total_bytes``
+        is ``None`` if the server did not send a
+        ``Content-Length`` header. The first chunk is always
+        reported; further invocations are throttled to at most
+        one per 0.5 seconds, plus a final call when the last
+        expected byte has been received.
 
     """
     logger.debug("downloading %s from %s", filename, url)
     context = ssl.create_default_context(cafile=certifi.where())
     with urllib.request.urlopen(url, context=context) as response:
+        content_length = response.headers.get("Content-Length")
+        total = int(content_length) if content_length else None
+        downloaded = 0
+        last_report: float | None = None
         with open(filename, "wb") as out_file:
-            shutil.copyfileobj(response, out_file)  # type: ignore
+            while chunk := response.read(64 * 1024):  # 64 KiB chunks
+                out_file.write(chunk)
+                downloaded += len(chunk)
+                now = time.monotonic()
+                if progress_callback is not None and (
+                    last_report is None or now - last_report >= 0.5 or downloaded == total
+                ):
+                    last_report = now
+                    progress_callback(downloaded, total)
+                logger.debug(
+                    "downloaded %d of %s bytes", downloaded, total if total is not None else "?"
+                )
 
 
 def _verify_file_hash(filename: Path, expected_sha1: str) -> bool:
@@ -234,19 +263,41 @@ def _extract_tgz(tgz: Path) -> None:
                 tar.extract(member, dest)
 
 
-def get_path() -> Path:
+def has_cached_assets() -> bool:
+    """
+    Check whether the Monaco Editor assets are already cached.
+
+    Returns
+    -------
+    bool
+        True if the cached assets exist and :func:`get_path` will return
+        them without downloading; False if a download is required.
+    """
+    package_dir = CACHE_DIR / "package"
+    return package_dir.exists() and any(package_dir.iterdir())
+
+
+def get_path(
+    progress_callback: Callable[[int, int | None], None] | None = None,
+) -> Path:
     """
     Download Monaco Editor assets if they do not exist.
+
+    Parameters
+    ----------
+    progress_callback : callable or None, optional
+        Forwarded to the download step; called with
+        ``(bytes_downloaded, total_bytes)`` while the assets are being
+        downloaded. Only invoked if a download actually takes place
+        (i.e. the assets are not already cached).
 
     Returns
     -------
     Path
         The path to the assests.
     """
-    package_dir = CACHE_DIR / "package"
-
-    if package_dir.exists() and any(package_dir.iterdir()):
-        return package_dir
+    if has_cached_assets():
+        return CACHE_DIR / "package"
     try:
         logger.info("no existing Monaco assets found, caching assets.")
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -254,12 +305,12 @@ def get_path() -> Path:
         tgz = f"{package}-{VERSION}.tgz"
         url = f"https://registry.npmjs.org/{package}/-/{tgz}"
         tgz_file = CACHE_DIR / tgz
-        _download_file(url, tgz_file)
+        _download_file(url, tgz_file, progress_callback=progress_callback)
         if not _verify_file_hash(tgz_file, EXPECTED_SHA1):
             raise ValueError(f"Hash verification failed for {tgz_file}")
         _extract_tgz(tgz_file)
         tgz_file.unlink()
-        return package_dir
+        return CACHE_DIR / "package"
     except Exception as e:
         if CACHE_DIR.exists():
             shutil.rmtree(CACHE_DIR, ignore_errors=True)
