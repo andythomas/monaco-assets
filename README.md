@@ -3,7 +3,7 @@
 A Python package that provides easy access to Monaco Editor assets. Assets are
 automatically downloaded on first use, eliminating the need to bundle large
 files with the package. Optionally, the assets can be served by a local
-webserver on a custom port (requires the ``server`` extra).
+webserver on a custom port (requires the `server` extra).
 
 ## Installation
 
@@ -39,6 +39,36 @@ import monaco_assets
 # Clear cache to free space before uninstalling the package
 monaco_assets.clear_cache()
 ```
+
+## Download Progress
+
+On a cold cache, `get_path()` downloads the Monaco Editor assets (~100 MB
+extracted). You can report the download progress in real time by passing a
+`progress_callback` that receives `(bytes_downloaded, total_bytes)`:
+
+```python
+import monaco_assets
+
+
+def show_progress(done: int, total: int | None) -> None:
+    if total is not None:
+        print(f"\r{done / total:.0%} of {total / 2**20:.1f} MiB", end="", flush=True)
+    else:
+        print(f"\r{done / 2**20:.1f} MiB", end="", flush=True)
+
+
+assets_path = monaco_assets.get_path(progress_callback=show_progress)
+```
+
+Notes:
+
+- The callback is only invoked if a download actually takes place; on a warm
+  cache `get_path()` returns immediately without calling it.
+- `total_bytes` is `None` if the server does not send a `Content-Length`
+  header. The first chunk is always reported; further calls are throttled to
+  at most one per 0.5 seconds, plus a final call when the download completes.
+- If you call `get_path()` from a background thread yourself, make the
+  callback thread-safe accordingly.
 
 ## Cache Locations
 
@@ -79,6 +109,7 @@ Version correspondence will be ensured after initial bugfixes.
 | Package Version | Monaco Editor Version |
 | --------------- | --------------------- |
 | 0.5.1           | 0.54.0                |
+| 0.7.0           | 0.54.0                |
 
 ## Requirements
 

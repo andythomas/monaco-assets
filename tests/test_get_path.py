@@ -46,7 +46,7 @@ def test_get_path_downloads_and_extracts_when_cache_empty(
 ) -> None:
     """When the cache is cold, get_path downloads and extracts."""
 
-    def _fake_download(_url: str, filename: Path) -> None:
+    def _fake_download(_url: str, filename: Path, **_kwargs) -> None:
         _write_fake_tgz(filename, {"package/loader.js": b"console.log('loader');"})
 
     monkeypatch.setattr(monaco_assets, "_download_file", _fake_download)
@@ -65,7 +65,7 @@ def test_get_path_raises_and_cleans_up_on_hash_mismatch(
 ) -> None:
     """A failed hash verification raises and cleans up the cache dir."""
 
-    def _fake_download(_url: str, filename: Path) -> None:
+    def _fake_download(_url: str, filename: Path, **_kwargs) -> None:
         _write_fake_tgz(filename, {"package/loader.js": b"console.log('loader');"})
 
     monkeypatch.setattr(monaco_assets, "_download_file", _fake_download)
@@ -82,7 +82,7 @@ def test_get_path_raises_and_cleans_up_on_download_failure(
 ) -> None:
     """A download failure raises and cleans up the cache dir."""
 
-    def _fake_download(_url: str, _filename: Path) -> None:
+    def _fake_download(_url: str, _filename: Path, **_kwargs) -> None:
         raise OSError("network unreachable")
 
     monkeypatch.setattr(monaco_assets, "_download_file", _fake_download)
@@ -100,7 +100,7 @@ def test_get_path_treats_empty_package_dir_as_cache_miss(
     package_dir = isolated_cache_dir / "package"
     package_dir.mkdir(parents=True)
 
-    def _fake_download(_url: str, filename: Path) -> None:
+    def _fake_download(_url: str, filename: Path, **_kwargs) -> None:
         _write_fake_tgz(filename, {"package/loader.js": b"console.log('loader');"})
 
     monkeypatch.setattr(monaco_assets, "_download_file", _fake_download)
