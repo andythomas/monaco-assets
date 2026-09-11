@@ -539,16 +539,12 @@ wheels = [
 
 [[package]]
 name = "monaco-assets"
-version = "0.6.0"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "certifi" },
-    { name = "platformdirs" },
-]
-
-[package.optional-dependencies]
-server = [
     { name = "fastapi" },
+    { name = "platformdirs" },
     { name = "uvicorn" },
 ]
 
@@ -567,11 +563,10 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "certifi" },
-    { name = "fastapi", marker = "extra == 'server'" },
+    { name = "fastapi" },
     { name = "platformdirs" },
-    { name = "uvicorn", marker = "extra == 'server'" },
+    { name = "uvicorn" },
 ]
-provides-extras = ["server"]
 
 [package.metadata.requires-dev]
 dev = [
