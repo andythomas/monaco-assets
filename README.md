@@ -3,7 +3,8 @@
 A Python package that provides easy access to Monaco Editor assets. Assets are
 automatically downloaded on first use, eliminating the need to bundle large
 files with the package. Optionally, the assets can be served by a local
-webserver on a custom port (requires the `server` extra).
+webserver on a custom port (`MonacoServer`); the required `fastapi` and
+`uvicorn` packages are installed together with monaco-assets.
 
 ## Installation
 
@@ -11,14 +12,6 @@ webserver on a custom port (requires the `server` extra).
 python3 -m pip install monaco-assets
 # or
 uv pip install monaco-assets
-```
-
-To also use the optional webserver (`MonacoServer`), install the `server` extra:
-
-```bash
-python3 -m pip install "monaco-assets[server]"
-# or
-uv pip install "monaco-assets[server]"
 ```
 
 ## Quick Start

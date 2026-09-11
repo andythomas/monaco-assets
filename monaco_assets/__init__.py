@@ -4,7 +4,7 @@ Provide Monaco editor assets.
 Download Monaco editor assets at first use. The assets are downloaded,
 extracted, and made available in a platform specific cache folder. To
 access the assets via HTTP, an optional webserver based on fastapi and
-uvicorn is provided (install the ``server`` extra).
+uvicorn is provided.
 """
 
 import hashlib
@@ -49,21 +49,6 @@ class UvicornToMonacoHandler(logging.Handler):
         self.monaco_logger.debug(msg)
 
 
-def _server_dependencies():
-    """Import the optional server dependencies (fastapi and uvicorn)."""
-    try:
-        import uvicorn
-        from fastapi import FastAPI
-        from fastapi.staticfiles import StaticFiles
-    except ImportError as exc:
-        raise ImportError(
-            "MonacoServer requires the optional server dependencies. "
-            "Install them with 'pip install monaco-assets[server]' (or "
-            "'uv pip install monaco-assets[server]')."
-        ) from exc
-    return FastAPI, StaticFiles, uvicorn
-
-
 class MonacoServer:
     """HTTP server to serve Monaco editor assets."""
 
@@ -80,13 +65,7 @@ class MonacoServer:
         ----------
         port : int
             Port number for the HTTP server (default: 8000)
-
-        Raises
-        ------
-        ImportError
-            If the optional server dependencies are not installed.
         """
-        _server_dependencies()  # Fail fast if the extras are missing.
         self.logger = logging.getLogger(f"{__name__}.MonacoServer")
         self._port: int = port
         self._server: uvicorn.Server | None = None
@@ -97,8 +76,16 @@ class MonacoServer:
         self._thread.start()
 
     def _run_server(self):
-        """Run the server and download assets if not cached."""
-        FastAPI, StaticFiles, uvicorn = _server_dependencies()
+        """Run the server and download assets if not cached.
+
+        The server dependencies are imported here, in the server thread,
+        so that using only the asset download and cache functions does
+        not pull the webserver stack into the process.
+        """
+        import uvicorn
+        from fastapi import FastAPI
+        from fastapi.staticfiles import StaticFiles
+
         try:
             app = FastAPI()
             assets_path = get_path()
