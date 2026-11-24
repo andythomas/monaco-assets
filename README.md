@@ -112,6 +112,7 @@ Version correspondence will be ensured after initial bugfixes.
 | --------------- | --------------------- |
 | 0.5.1           | 0.54.0                |
 | 0.7.0           | 0.54.0                |
+| 0.55.0          | 0.55.0                |
 
 ## Requirements
 
