@@ -4,13 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release (must match pyproject.toml, e.g. 0.8.0)"
+        description: "Version to release (must match pyproject.toml, e.g. 0.56.0)"
         required: true
       draft:
-        description: "Create a draft GitHub release"
+        description: "Create a draft GitHub release (skips the PyPI publish)"
         required: false
         default: false
         type: boolean
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -37,3 +41,26 @@ jobs:
           tag_name: v${{ inputs.version }}
           generate_release_notes: true
           draft: ${{ inputs.draft }}
+
+  publish:
+    needs: release
+    if: ${{ !inputs.draft }}
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.3.2
+        with:
+          python-version: "3.13"
+
+      - name: Build distributions
+        run: uv build --no-sources
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.14.3
+        with:
+          packages-dir: dist
