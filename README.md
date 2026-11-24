@@ -112,7 +112,7 @@ provided by this package.
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.11+
 - Internet connection (only for initial asset download)
 - ~100MB disk space for Monaco Editor assets
 
