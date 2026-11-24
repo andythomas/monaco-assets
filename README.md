@@ -106,13 +106,9 @@ assets_path = monaco_assets.get_path()
 
 ## Version Correspondence
 
-Version correspondence will be ensured after initial bugfixes.
-
-| Package Version | Monaco Editor Version |
-| --------------- | --------------------- |
-| 0.5.1           | 0.54.0                |
-| 0.7.0           | 0.54.0                |
-| 0.55.0          | 0.55.0                |
+The package version matches the Monaco editor version it downloads.
+Only Monaco editor versions >= 0.55 are available; older versions are not
+provided by this package.
 
 ## Requirements
 
