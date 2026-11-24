@@ -26,8 +26,8 @@ from platformdirs import user_cache_dir
 if TYPE_CHECKING:
     import uvicorn
 
-VERSION = "0.55.1"
-EXPECTED_SHA1 = "e74c6fe5a6bf985b817d2de3eb88d56afc494a1b"
+VERSION = "0.56.0"
+EXPECTED_SHA1 = "e85ac00b7ab7092ca1d077894504919af5073cf0"
 
 CACHE_DIR = Path(user_cache_dir("monaco-assets", "monaco-assets")) / f"monaco-editor-{VERSION}"
 
